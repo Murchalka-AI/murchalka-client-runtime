@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/Solution Items/"><File Path="Directory.Build.props" /><File Path="Directory.Packages.props" /><File Path="README.md" /></Folder>
+  <Folder Name="/src/"><Project Path="src/Murchalka.ClientRuntime/Murchalka.ClientRuntime.csproj" /></Folder>
+  <Folder Name="/tests/"><Project Path="tests/Murchalka.ClientRuntime.Tests/Murchalka.ClientRuntime.Tests.csproj" /></Folder>
+</Solution>
