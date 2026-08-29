@@ -1,6 +1,6 @@
 {
   "name": "@murchalka-ai/client-runtime",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Product-agnostic Murchalka client extension host for Web and Desktop shells.",
   "type": "module",
   "main": "./dist/index.js",

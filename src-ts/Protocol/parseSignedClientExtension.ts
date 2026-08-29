@@ -27,6 +27,19 @@ export function parseSignedClientExtension(bytes: Uint8Array): SignedClientExten
   asRecord(extension.componentTree, "component tree");
   asRecord(extension.accessibility, "accessibility metadata");
   asRecord(extension.localization, "localization metadata");
+  if (extension.componentDefinitions !== undefined) {
+    if (!Array.isArray(extension.componentDefinitions) || extension.componentDefinitions.length > 32) throw new Error("Custom component definitions are invalid.");
+    for (const value of extension.componentDefinitions) {
+      const definition = asRecord(value, "custom component definition");
+      if (typeof definition.id !== "string" || typeof definition.version !== "number" ||
+          typeof definition.propertiesSchemaVersion !== "number" || typeof definition.eventsSchemaVersion !== "number") {
+        throw new Error("Custom component definition metadata is invalid.");
+      }
+      asRecord(definition.propertiesSchema, "custom component properties schema");
+      asRecord(definition.eventsSchema, "custom component events schema");
+      asRecord(definition.template, "custom component template");
+    }
+  }
   return { schemaVersion: 1, extension: extension as unknown as ClientExtension, signature: {
     algorithm: "ecdsa-p256-sha256",
     keyId: signature.keyId,

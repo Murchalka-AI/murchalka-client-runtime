@@ -1,8 +1,11 @@
 import type { ClientSecurityPolicy } from "../Security/ClientSecurityPolicy.js";
 import type { WasmExecutionResult } from "./WasmExecutionResult.js";
+import { WasmBinaryInspector } from "./WasmBinaryInspector.js";
 
 /** Executes a WASM component in a disposable, networkless worker with bounded resources. */
 export class WasmSandbox {
+  private readonly inspector = new WasmBinaryInspector();
+
   /** Creates a WASM sandbox with shared Client Runtime limits. */
   public constructor(private readonly policy: ClientSecurityPolicy) {}
 
@@ -12,6 +15,10 @@ export class WasmSandbox {
     if (bytes.byteLength === 0 || bytes.byteLength > this.policy.maximumWasmBytes) {
       return Promise.reject(new Error("WASM component exceeds the configured size limit."));
     }
+    let declaredMemoryPages: number;
+    try { declaredMemoryPages = this.inspector.maximumMemoryPages(bytes); }
+    catch (error) { return Promise.reject(error); }
+    if (declaredMemoryPages > this.policy.maximumWasmMemoryPages) return Promise.reject(new Error("WASM component declares memory outside the configured limit."));
     if (!/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(exportName)) return Promise.reject(new Error("WASM export name is invalid."));
     const workerSource = this.workerSource();
     const workerUrl = URL.createObjectURL(new Blob([workerSource], { type: "text/javascript" }));
@@ -57,7 +64,7 @@ export class WasmSandbox {
         let fuel = data.fuel;
         try {
           const imports = Object.freeze({ murchalka: Object.freeze({ consume_fuel: amount => {
-            if (!Number.isInteger(amount) || amount < 0 || amount > fuel) throw new Error("WASM fuel exhausted.");
+            if (!Number.isInteger(amount) || amount <= 0 || amount > fuel) throw new Error("WASM fuel exhausted.");
             fuel -= amount;
           } }) });
           const module = await WebAssembly.compile(data.bytes);
@@ -68,9 +75,13 @@ export class WasmSandbox {
           const instance = await WebAssembly.instantiate(module, imports);
           const exported = instance.exports[data.exportName];
           if (typeof exported !== "function") throw new Error("WASM export is missing.");
+          let memoryPages = 0;
+          for (const candidate of Object.values(instance.exports)) {
+            if (candidate instanceof WebAssembly.Memory) memoryPages = Math.max(memoryPages, candidate.buffer.byteLength / 65536);
+          }
+          if (memoryPages > data.maximumMemoryPages) throw new Error("WASM memory limit exceeded.");
           const value = exported();
           if (typeof value !== "number" || !Number.isFinite(value)) throw new Error("WASM export must return a finite number.");
-          let memoryPages = 0;
           for (const candidate of Object.values(instance.exports)) {
             if (candidate instanceof WebAssembly.Memory) memoryPages = Math.max(memoryPages, candidate.buffer.byteLength / 65536);
           }

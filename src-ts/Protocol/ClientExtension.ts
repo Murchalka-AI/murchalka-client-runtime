@@ -4,6 +4,7 @@ import type { AccessibilityMetadata } from "./AccessibilityMetadata.js";
 import type { ClientTarget } from "./ClientTarget.js";
 import type { ExtensionRuntimeMode } from "./ExtensionRuntimeMode.js";
 import type { LocalizationMetadata } from "./LocalizationMetadata.js";
+import type { CustomComponentDefinition } from "../Declarative/CustomComponentDefinition.js";
 
 /** Defines the signed, product-agnostic payload activated by the Client Runtime. */
 export interface ClientExtension {
@@ -13,6 +14,7 @@ export interface ClientExtension {
   readonly version: string;
   readonly targets: readonly ClientTarget[];
   readonly mode: ExtensionRuntimeMode;
+  readonly componentDefinitions?: readonly CustomComponentDefinition[];
   readonly componentTree: ComponentNode;
   readonly actions: readonly ClientActionDefinition[];
   readonly accessibility: AccessibilityMetadata;

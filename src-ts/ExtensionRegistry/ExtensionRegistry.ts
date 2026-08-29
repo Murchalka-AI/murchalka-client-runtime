@@ -35,7 +35,11 @@ export class ExtensionRegistry {
   }
 
   /** Activates a complete catalog revision or rolls back to the previous revision on any failure. */
-  public async activate(snapshot: ExtensionCatalogSnapshot, signal?: AbortSignal): Promise<ExtensionRegistrySnapshot> {
+  public async activate(
+    snapshot: ExtensionCatalogSnapshot,
+    signal?: AbortSignal,
+    validate?: (candidate: ExtensionRegistrySnapshot) => Promise<void>,
+  ): Promise<ExtensionRegistrySnapshot> {
     if (snapshot.revision < this.current.revision) throw new Error("Extension catalog rollback requires an explicit Runtime revision.");
     if (snapshot.revision === this.current.revision) return this.current;
     const identifiers = new Set<string>();
@@ -45,7 +49,9 @@ export class ExtensionRegistry {
       identifiers.add(entry.extensionId);
       candidates.push(await this.load(entry, signal));
     }
-    this.current = Object.freeze({ revision: snapshot.revision, extensions: Object.freeze(candidates) });
+    const candidate = Object.freeze({ revision: snapshot.revision, extensions: Object.freeze(candidates) });
+    if (validate !== undefined) await validate(candidate);
+    this.current = candidate;
     return this.current;
   }
 
@@ -72,7 +78,7 @@ export class ExtensionRegistry {
     }
     await this.signatureVerifier.verify(document, entry.publisher);
     this.accessibilityValidator.validate(document.extension);
-    this.componentTreeValidator.validate(document.extension.componentTree, this.policy);
+    this.componentTreeValidator.validate(document.extension.componentTree, this.policy, document.extension.componentDefinitions ?? []);
     this.validateActions(document.extension);
     if (document.extension.expiresAt !== undefined && Date.parse(document.extension.expiresAt) <= Date.now()) {
       throw new Error("Extension document has expired.");
