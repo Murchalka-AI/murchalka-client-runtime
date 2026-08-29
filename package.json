@@ -1,6 +1,6 @@
 {
-  "name": "@murchalka/client-runtime",
-  "version": "0.4.0",
+  "name": "@murchalka-ai/client-runtime",
+  "version": "0.4.1",
   "description": "Product-agnostic Murchalka client extension host for Web and Desktop shells.",
   "type": "module",
   "main": "./dist/index.js",
@@ -30,7 +30,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Murchalka-AI/murchalka-client-runtime.git"
+    "url": "git+https://github.com/Murchalka-AI/murchalka-client-runtime.git"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",

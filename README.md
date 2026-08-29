@@ -2,7 +2,7 @@
 
 Universal product-agnostic client protocol and extension host. Phase 7 adds a strict TypeScript runtime shared by Web and Desktop shells: atomic extension catalogs, ECDSA and SHA-256 verification, declarative rendering, networkless worker-isolated WASM, bounded server actions, accessibility fallbacks, and verified offline caching.
 
-The browser-facing package is `@murchalka/client-runtime`. It has no runtime dependencies and exposes only standard Web Platform APIs. The .NET package remains available for native hosts and authenticated realtime protocol access.
+The browser-facing package is `@murchalka-ai/client-runtime`. It has no runtime dependencies and exposes only standard Web Platform APIs. The .NET package remains available for native hosts and authenticated realtime protocol access.
 
 ```sh
 npm ci
