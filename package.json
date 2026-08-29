@@ -1,0 +1,39 @@
+{
+  "name": "@murchalka/client-runtime",
+  "version": "0.4.0",
+  "description": "Product-agnostic Murchalka client extension host for Web and Desktop shells.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md", "SECURITY.md"],
+  "scripts": {
+    "build:ts": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:ts": "vitest run",
+    "check:ts": "npm run typecheck && npm run test:ts && npm run build:ts",
+    "pack:ts": "npm pack --pack-destination artifacts"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "@types/node": "26.3.0",
+    "typescript": "7.0.2",
+    "vitest": "4.1.11"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Murchalka-AI/murchalka-client-runtime.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "public"
+  }
+}

@@ -15,6 +15,11 @@ jobs:
         with: { fetch-depth: 0, persist-credentials: false }
       - uses: actions/setup-dotnet@v6
         with: { global-json-file: global.json }
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://npm.pkg.github.com
+          scope: '@murchalka'
       - id: version
         shell: bash
         run: |
@@ -32,9 +37,16 @@ jobs:
       - run: dotnet build Murchalka.ClientRuntime.slnx -c Release --no-restore -p:Version=${{ steps.version.outputs.value }}
       - run: dotnet run --project tests/Murchalka.ClientRuntime.Tests/Murchalka.ClientRuntime.Tests.csproj -c Release --no-build --no-restore -- -reporter quiet
       - run: dotnet pack src/Murchalka.ClientRuntime/Murchalka.ClientRuntime.csproj -c Release --no-build --no-restore -p:Version=${{ steps.version.outputs.value }} -o artifacts/release
+      - run: test "$(node --print 'require("./package.json").version')" = "${{ steps.version.outputs.value }}"
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run check:ts
+      - run: npm pack --pack-destination artifacts/release
       - uses: actions/attest-build-provenance@v3
         with: { subject-path: 'artifacts/release/*.nupkg' }
       - name: Publish package
         run: dotnet nuget push "artifacts/release/*.nupkg" --api-key "${{ github.token }}" --source "https://nuget.pkg.github.com/Murchalka-AI/index.json" --skip-duplicate
+      - name: Publish TypeScript package
+        env: { NODE_AUTH_TOKEN: "${{ github.token }}" }
+        run: npm publish --provenance
       - env: { GH_TOKEN: "${{ github.token }}" }
         run: gh release create "${GITHUB_REF_NAME}" artifacts/release/* --repo "${GITHUB_REPOSITORY}" --verify-tag --generate-notes --title "${GITHUB_REF_NAME}"

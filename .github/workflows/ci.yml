@@ -27,4 +27,7 @@ jobs:
         run: dotnet format Murchalka.ClientRuntime.slnx --verify-no-changes --no-restore
       - run: dotnet build Murchalka.ClientRuntime.slnx -c Release --no-restore
       - run: dotnet run --project tests/Murchalka.ClientRuntime.Tests/Murchalka.ClientRuntime.Tests.csproj -c Release --no-build --no-restore -- -reporter quiet
-
+      - uses: actions/setup-node@v6
+        with: { node-version: 24, cache: npm }
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run check:ts
