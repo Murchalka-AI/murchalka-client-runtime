@@ -10,5 +10,6 @@ export const defaultClientSecurityPolicy: ClientSecurityPolicy = Object.freeze({
   maximumWasmBytes: 512 * 1024,
   maximumWasmMemoryPages: 256,
   maximumWasmFuel: 100_000,
+  wasmStartupDeadlineMilliseconds: 5_000,
   wasmDeadlineMilliseconds: 250,
 });

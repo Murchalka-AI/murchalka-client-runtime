@@ -9,7 +9,7 @@ export class WasmSandbox {
   /** Creates a WASM sandbox with shared Client Runtime limits. */
   public constructor(private readonly policy: ClientSecurityPolicy) {}
 
-  /** Invokes an exported zero-argument function and terminates the worker at the deadline. */
+  /** Invokes an exported zero-argument function and terminates the worker at its startup or execution deadline. */
   public execute(wasmBase64: string, exportName: string, signal?: AbortSignal): Promise<WasmExecutionResult> {
     const bytes = Uint8Array.from(atob(wasmBase64), character => character.charCodeAt(0));
     if (bytes.byteLength === 0 || bytes.byteLength > this.policy.maximumWasmBytes) {
@@ -25,31 +25,51 @@ export class WasmSandbox {
     const worker = new Worker(workerUrl, { name: "murchalka-wasm-sandbox" });
     URL.revokeObjectURL(workerUrl);
     return new Promise<WasmExecutionResult>((resolve, reject) => {
-      const timer = setTimeout(() => finish(new Error("WASM component exceeded its execution deadline.")), this.policy.wasmDeadlineMilliseconds);
-      const aborted = (): void => finish(new DOMException("WASM execution was cancelled.", "AbortError"));
+      let settled = false;
+      let executionStarted = false;
+      let startupTimer: ReturnType<typeof setTimeout> | undefined;
+      let executionTimer: ReturnType<typeof setTimeout> | undefined;
       const finish = (error?: Error, result?: WasmExecutionResult): void => {
-        clearTimeout(timer);
+        if (settled) return;
+        settled = true;
+        if (startupTimer !== undefined) clearTimeout(startupTimer);
+        if (executionTimer !== undefined) clearTimeout(executionTimer);
         signal?.removeEventListener("abort", aborted);
         worker.terminate();
         if (error !== undefined) reject(error);
         else if (result !== undefined) resolve(result);
         else reject(new Error("WASM component returned no result."));
       };
+      const aborted = (): void => finish(new DOMException("WASM execution was cancelled.", "AbortError"));
       worker.addEventListener("message", event => {
-        const response = event.data as Partial<WasmExecutionResult> & { readonly error?: unknown };
-        if (typeof response.error === "string") finish(new Error(response.error));
-        else if (typeof response.value === "number" && typeof response.fuelRemaining === "number" && typeof response.memoryPages === "number") {
+        const response = event.data as Partial<WasmExecutionResult> & { readonly type?: unknown; readonly error?: unknown };
+        if (response.type === "ready" && !executionStarted) {
+          executionStarted = true;
+          if (startupTimer !== undefined) clearTimeout(startupTimer);
+          executionTimer = setTimeout(
+            () => finish(new Error("WASM component exceeded its execution deadline.")),
+            this.policy.wasmDeadlineMilliseconds,
+          );
+          worker.postMessage(
+            { bytes, exportName, fuel: this.policy.maximumWasmFuel, maximumMemoryPages: this.policy.maximumWasmMemoryPages },
+            [bytes.buffer],
+          );
+        } else if (response.type === "error" && typeof response.error === "string") finish(new Error(response.error));
+        else if (response.type === "result" && typeof response.value === "number" && typeof response.fuelRemaining === "number" && typeof response.memoryPages === "number") {
           if (response.memoryPages > this.policy.maximumWasmMemoryPages) finish(new Error("WASM component exceeded its memory limit."));
           else finish(undefined, { value: response.value, fuelRemaining: response.fuelRemaining, memoryPages: response.memoryPages });
         } else finish(new Error("WASM component returned an invalid result."));
-      }, { once: true });
+      });
       worker.addEventListener("error", () => finish(new Error("WASM component failed inside its worker.")), { once: true });
       signal?.addEventListener("abort", aborted, { once: true });
       if (signal?.aborted === true) {
         aborted();
         return;
       }
-      worker.postMessage({ bytes, exportName, fuel: this.policy.maximumWasmFuel, maximumMemoryPages: this.policy.maximumWasmMemoryPages }, [bytes.buffer]);
+      startupTimer = setTimeout(
+        () => finish(new Error("WASM worker exceeded its startup deadline.")),
+        this.policy.wasmStartupDeadlineMilliseconds ?? 5_000,
+      );
     });
   }
 
@@ -87,11 +107,12 @@ export class WasmSandbox {
           }
           if (memoryPages > data.maximumMemoryPages) throw new Error("WASM memory limit exceeded.");
           if (fuel === data.fuel) throw new Error("WASM component did not consume metered fuel.");
-          self.postMessage({ value, fuelRemaining: fuel, memoryPages });
+          self.postMessage({ type: "result", value, fuelRemaining: fuel, memoryPages });
         } catch (error) {
-          self.postMessage({ error: error instanceof Error ? error.message : "WASM execution failed." });
+          self.postMessage({ type: "error", error: error instanceof Error ? error.message : "WASM execution failed." });
         }
       };
+      self.postMessage({ type: "ready" });
     `;
   }
 }

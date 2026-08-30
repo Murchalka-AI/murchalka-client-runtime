@@ -8,5 +8,8 @@ export interface ClientSecurityPolicy {
   readonly maximumWasmBytes: number;
   readonly maximumWasmMemoryPages: number;
   readonly maximumWasmFuel: number;
+  /** Gets the maximum time allowed for an isolated WASM worker to become ready. */
+  readonly wasmStartupDeadlineMilliseconds?: number;
+  /** Gets the maximum time allowed for WASM compilation and execution after worker startup. */
   readonly wasmDeadlineMilliseconds: number;
 }
